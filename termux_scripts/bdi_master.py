@@ -184,7 +184,7 @@ class IntentionSystem:
         print(f"🚀 Deploying {intention['count']} REAL agents to {intention['platform']}...")
         cfg = self.config; token = cfg['secrets']['VERCEL_TOKEN']; project_id = cfg['secrets']['VERCEL_PROJECT_ID']; owner = cfg['cloud_services']['github']['owner']; repo = cfg['cloud_services']['github']['repo']
         url = f"https://api.vercel.com/v13/deployments"; headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        payload = {"name": f"fmaa-bdi-agent-v1", "projectId": project_id, "target": "production", "gitSource": {"type": "github","repoId": 1037687440, "repo": repo, "owner": owner, "ref": "main"}}
+        payload = {"name": f"fmaa-bdi-agent-v1", "target": "production", "gitSource": {"type": "github","repoId": 1037687440, "repo": repo, "owner": owner, "ref": "main"}}
         try:
             loop = asyncio.get_event_loop()
             r = await loop.run_in_executor(None, lambda: requests.post(url, headers=headers, json=payload, timeout=20))
