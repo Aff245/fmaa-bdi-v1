@@ -286,11 +286,24 @@ class FMAABDIMaster:
         self.app.run(host='0.0.0.0', port=8080, debug=False)
 
 
+# --- TEMPEL DUA BLOK INI DI BAGIAN PALING BAWAH ---
+
+# Langkah 1: Buat instance agen dan ekspos "app" Flask-nya
+# Vercel akan mencari variabel bernama 'app' ini secara global.
+master_agent = FMAABDIMaster()
+app = master_agent.app
+
+# Langkah 2: Blok ini HANYA akan berjalan jika dieksekusi langsung
+# di terminal (seperti di Termux). Vercel akan MENGABAIKAN blok ini.
 if __name__ == '__main__':
-    master_agent = FMAABDIMaster()
+    print("🚀 Starting agent in local Termux mode...")
+    # Jalankan dashboard di thread terpisah
     dashboard_thread = threading.Thread(target=master_agent.start_dashboard, daemon=True)
     dashboard_thread.start()
+    
+    # Jalankan BDI cycle di thread utama
     try:
         asyncio.run(master_agent.run_agent())
     except KeyboardInterrupt:
         print("\n👋 Agent dihentikan.")
+
