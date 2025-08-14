@@ -204,33 +204,33 @@ class FMAABDIMaster:
         self._setup_dashboard_routes()
 
     def _load_config(self) -> Dict:
-    """Load configuration from Environment Variables (for Vercel) or YAML (for local)."""
-    # Coba baca dari Environment Variables dulu (untuk Vercel)
-    if os.getenv('VERCEL'):
-        print("✅ Running on Vercel, using environment variables.")
-        return {
-            'cloud_services': {
-                'github': {'owner': os.getenv('GITHUB_OWNER'), 'repo': os.getenv('GITHUB_REPO')},
-                'supabase': {'url': os.getenv('SUPABASE_URL')}
-            },
-            'secrets': {
-                'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN'),
-                'SUPABASE_KEY': os.getenv('SUPABASE_KEY'),
-                'VERCEL_TOKEN': os.getenv('VERCEL_TOKEN'),
-                'VERCEL_PROJECT_ID': os.getenv('VERCEL_PROJECT_ID')
-            },
-            'revenue_targets': {'monthly_goal': 50000}
-        }
+        """Load configuration from Environment Variables (for Vercel) or YAML (for local)."""
+        # Coba baca dari Environment Variables dulu (untuk Vercel)
+        if os.getenv('VERCEL'):
+            print("✅ Running on Vercel, using environment variables.")
+            return {
+                'cloud_services': {
+                    'github': {'owner': os.getenv('GITHUB_OWNER'), 'repo': os.getenv('GITHUB_REPO')},
+                    'supabase': {'url': os.getenv('SUPABASE_URL')}
+                },
+                'secrets': {
+                    'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN'),
+                    'SUPABASE_KEY': os.getenv('SUPABASE_KEY'),
+                    'VERCEL_TOKEN': os.getenv('VERCEL_TOKEN'),
+                    'VERCEL_PROJECT_ID': os.getenv('VERCEL_PROJECT_ID')
+                },
+                'revenue_targets': {'monthly_goal': 50000}
+            }
 
-    # Jika tidak ada, fallback ke file lokal (untuk Termux)
-    print("✅ Running locally, using config.yaml.")
-    config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
-    try:
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        print(f"FATAL: config.yaml not found at {config_path}. Halting.")
-        exit()
+        # Jika tidak ada, fallback ke file lokal (untuk Termux)
+        print("✅ Running locally, using config.yaml.")
+        config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
+        try:
+            with open(config_path, 'r') as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            print(f"FATAL: config.yaml not found at {config_path}. Halting.")
+            exit()
 
     async def bdi_cycle(self):
         print("🔄 Starting BDI Cycle...")
@@ -260,14 +260,25 @@ class FMAABDIMaster:
     def _setup_dashboard_routes(self):
         @self.app.route('/')
         def dashboard():
-            return render_template_string(DASHBOARD_TEMPLATE, beliefs=self.belief_system.beliefs, desires=self.desire_engine.current_desires, intentions=self.intention_system.active_intentions, running=self.running)
+            return render_template_string(DASHBOARD_TEMPLATE,
+                                        beliefs=self.belief_system.beliefs,
+                                        desires=self.desire_engine.current_desires,
+                                        intentions=self.intention_system.active_intentions,
+                                        running=self.running)
+
         @self.app.route('/api/status')
         def api_status():
-            return jsonify({'status': 'running' if self.running else 'stopped', 'beliefs': self.belief_system.beliefs, 'desires': len(self.desire_engine.current_desires), 'intentions': len(self.intention_system.active_intentions)})
+            return jsonify({
+                'status': 'running' if self.running else 'stopped',
+                'beliefs': self.belief_system.beliefs,
+                'desires': len(self.desire_engine.current_desires),
+                'intentions': len(self.intention_system.active_intentions)
+            })
 
     def start_dashboard(self):
         print("🌐 Starting dashboard at http://localhost:8080")
         self.app.run(host='0.0.0.0', port=8080, debug=False)
+
 
 if __name__ == '__main__':
     master_agent = FMAABDIMaster()
