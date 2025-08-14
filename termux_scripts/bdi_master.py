@@ -203,34 +203,62 @@ class FMAABDIMaster:
         self.app = Flask(__name__)
         self._setup_dashboard_routes()
 
-    def _load_config(self) -> Dict:
-        """Load configuration from Environment Variables (for Vercel) or YAML (for local)."""
-        # Coba baca dari Environment Variables dulu (untuk Vercel)
-        if os.getenv('VERCEL'):
-            print("✅ Running on Vercel, using environment variables.")
-            return {
-                'cloud_services': {
-                    'github': {'owner': os.getenv('GITHUB_OWNER'), 'repo': os.getenv('GITHUB_REPO')},
-                    'supabase': {'url': os.getenv('SUPABASE_URL')}
-                },
-                'secrets': {
-                    'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN'),
-                    'SUPABASE_KEY': os.getenv('SUPABASE_KEY'),
-                    'VERCEL_TOKEN': os.getenv('VERCEL_TOKEN'),
-                    'VERCEL_PROJECT_ID': os.getenv('VERCEL_PROJECT_ID')
-                },
-                'revenue_targets': {'monthly_goal': 50000}
-            }
+    # --- GANTI FUNGSI LAMA DENGAN VERSI DETEKTIF INI ---
+def _load_config(self) -> Dict:
+    """Load configuration from Environment Variables or local YAML."""
+    
+    # Cek jika berjalan di Vercel
+    if os.getenv('VERCEL'):
+        print("✅ Running on Vercel. Checking environment variables...")
+        print("--- Vercel Environment Variable Audit ---")
+        
+        # Daftar semua kunci yang kita butuhkan
+        required_keys = [
+            'GITHUB_OWNER', 'GITHUB_REPO', 'SUPABASE_URL', 
+            'GITHUB_TOKEN', 'SUPABASE_KEY', 'VERCEL_TOKEN', 
+            'VERCEL_PROJECT_ID'
+        ]
+        
+        # Cek setiap kunci dan laporkan statusnya
+        all_found = True
+        for key in required_keys:
+            value = os.getenv(key)
+            if value:
+                print(f"  [✅] Found key: {key}")
+            else:
+                print(f"  [❌] MISSING KEY: {key}!")
+                all_found = False
 
-        # Jika tidak ada, fallback ke file lokal (untuk Termux)
-        print("✅ Running locally, using config.yaml.")
-        config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
-        try:
-            with open(config_path, 'r') as f:
-                return yaml.safe_load(f)
-        except FileNotFoundError:
-            print(f"FATAL: config.yaml not found at {config_path}. Halting.")
-            exit()
+        print("-----------------------------------------")
+
+        # Jika ada yang hilang, hentikan program dengan pesan error
+        if not all_found:
+             raise ValueError("FATAL: One or more required environment variables are missing on Vercel. Check the logs above.")
+
+        # Jika semua ada, bangun konfigurasinya
+        return {
+            'cloud_services': {
+                'github': {'owner': os.getenv('GITHUB_OWNER'), 'repo': os.getenv('GITHUB_REPO')},
+                'supabase': {'url': os.getenv('SUPABASE_URL')}
+            },
+            'secrets': {
+                'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN'),
+                'SUPABASE_KEY': os.getenv('SUPABASE_KEY'),
+                'VERCEL_TOKEN': os.getenv('VERCEL_TOKEN'),
+                'VERCEL_PROJECT_ID': os.getenv('VERCEL_PROJECT_ID')
+            },
+            'revenue_targets': {'monthly_goal': 50000}
+        }
+    
+    # Fallback untuk Termux (lokal)
+    print("✅ Running locally, using config.yaml.")
+    config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
+    try:
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        print(f"FATAL: config.yaml not found at {config_path}. Halting.")
+        exit()
 
     async def bdi_cycle(self):
         print("🔄 Starting BDI Cycle...")
