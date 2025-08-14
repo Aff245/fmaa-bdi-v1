@@ -267,8 +267,40 @@ class IntentionSystem:
                 print("🔧 Optimizing processes (placeholder)...")
 
     async def _deploy_agents(self, intention: Dict):
-        """Deploy new micro-agents to cloud (placeholder)"""
-        print(f"🚀 Deploying {intention['count']} agents to {intention['platform']} (placeholder)...")
+        """Deploy new micro-agents to Vercel"""
+        print(f"🚀 Deploying {intention['count']} REAL agents to {intention['platform']}...")
+        cfg = self.config
+        token = cfg['secrets']['VERCEL_TOKEN']
+        project_id = cfg['secrets']['VERCEL_PROJECT_ID']
+        owner = cfg['cloud_services']['github']['owner']
+        repo = cfg['cloud_services']['github']['repo']
+
+        url = f"https://api.vercel.com/v13/deployments"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "name": f"fmaa-bdi-agent-v1",
+            "projectId": project_id,
+            "target": "production",
+            "gitSource": {
+                "type": "github",
+                "repo": repo,
+                "owner": owner,
+                "ref": "main"
+            }
+        }
+        try:
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, lambda: requests.post(url, headers=headers, json=payload, timeout=20))
+
+            if response.status_code in [200, 201, 202]:
+                print(f"✅ Vercel deployment triggered successfully! ID: {response.json().get('id')}")
+            else:
+                print(f"❌ Vercel deployment failed: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"❌ Vercel API Call Error: {e}")
 
 class FMAABDIMaster:
     """🤖 Master BDI Agent Orchestrator"""
