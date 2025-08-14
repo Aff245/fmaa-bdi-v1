@@ -195,72 +195,57 @@ class IntentionSystem:
 class FMAABDIMaster:
     """🤖 Master BDI Agent Orchestrator"""
     def __init__(self):
+        # Langkah 1: Muat konfigurasi DULU! Ini yang paling penting.
         self.config = self._load_config()
+
+        # Langkah 2: Baru buat sistem lain menggunakan config yang sudah ada
         self.belief_system = BeliefSystem(self.config)
         self.desire_engine = DesireEngine(self.belief_system)
         self.intention_system = IntentionSystem(self.belief_system, self.desire_engine, self.config)
+        
+        # Langkah 3: Sisa setup
         self.running = False
         self.app = Flask(__name__)
         self._setup_dashboard_routes()
 
-    # --- GANTI FUNGSI LAMA DENGAN VERSI DETEKTIF INI ---
-def _load_config(self) -> Dict:
-    """Load configuration from Environment Variables or local YAML."""
-    
-    # Cek jika berjalan di Vercel
-    if os.getenv('VERCEL'):
-        print("✅ Running on Vercel. Checking environment variables...")
-        print("--- Vercel Environment Variable Audit ---")
-        
-        # Daftar semua kunci yang kita butuhkan
-        required_keys = [
-            'GITHUB_OWNER', 'GITHUB_REPO', 'SUPABASE_URL', 
-            'GITHUB_TOKEN', 'SUPABASE_KEY', 'VERCEL_TOKEN', 
-            'VERCEL_PROJECT_ID'
-        ]
-        
-        # Cek setiap kunci dan laporkan statusnya
-        all_found = True
-        for key in required_keys:
-            value = os.getenv(key)
-            if value:
-                print(f"  [✅] Found key: {key}")
-            else:
-                print(f"  [❌] MISSING KEY: {key}!")
-                all_found = False
+    def _load_config(self) -> Dict:
+        """Load configuration from Environment Variables (for Vercel) or YAML (for local)."""
+        # Coba baca dari Environment Variables dulu (untuk Vercel)
+        # Vercel secara otomatis set variable 'VERCEL'
+        if os.getenv('VERCEL'):
+            print("✅ Running on Vercel, using environment variables.")
+            # Pastikan semua env var ada sebelum lanjut
+            required_vars = ['GITHUB_OWNER', 'GITHUB_REPO', 'SUPABASE_URL', 'GITHUB_TOKEN', 'SUPABASE_KEY', 'VERCEL_TOKEN', 'VERCEL_PROJECT_ID']
+            if not all(os.getenv(var) for var in required_vars):
+                print("❌ FATAL: Missing one or more required environment variables on Vercel.")
+                exit()
+            
+            return {
+                'cloud_services': {
+                    'github': {'owner': os.getenv('GITHUB_OWNER'), 'repo': os.getenv('GITHUB_REPO')},
+                    'supabase': {'url': os.getenv('SUPABASE_URL')}
+                },
+                'secrets': {
+                    'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN'),
+                    'SUPABASE_KEY': os.getenv('SUPABASE_KEY'),
+                    'VERCEL_TOKEN': os.getenv('VERCEL_TOKEN'),
+                    'VERCEL_PROJECT_ID': os.getenv('VERCEL_PROJECT_ID')
+                },
+                'revenue_targets': {'monthly_goal': 50000}
+            }
 
-        print("-----------------------------------------")
-
-        # Jika ada yang hilang, hentikan program dengan pesan error
-        if not all_found:
-             raise ValueError("FATAL: One or more required environment variables are missing on Vercel. Check the logs above.")
-
-        # Jika semua ada, bangun konfigurasinya
-        return {
-            'cloud_services': {
-                'github': {'owner': os.getenv('GITHUB_OWNER'), 'repo': os.getenv('GITHUB_REPO')},
-                'supabase': {'url': os.getenv('SUPABASE_URL')}
-            },
-            'secrets': {
-                'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN'),
-                'SUPABASE_KEY': os.getenv('SUPABASE_KEY'),
-                'VERCEL_TOKEN': os.getenv('VERCEL_TOKEN'),
-                'VERCEL_PROJECT_ID': os.getenv('VERCEL_PROJECT_ID')
-            },
-            'revenue_targets': {'monthly_goal': 50000}
-        }
-    
-    # Fallback untuk Termux (lokal)
-    print("✅ Running locally, using config.yaml.")
-    config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
-    try:
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        print(f"FATAL: config.yaml not found at {config_path}. Halting.")
-        exit()
+        # Jika tidak di Vercel, fallback ke file lokal (untuk Termux)
+        print("✅ Running locally, using config.yaml.")
+        config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
+        try:
+            with open(config_path, 'r') as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            print(f"FATAL: config.yaml not found at {config_path}. Halting.")
+            exit()
 
     async def bdi_cycle(self):
+        """Main BDI reasoning cycle"""
         print("🔄 Starting BDI Cycle...")
         await self.belief_system.update_beliefs()
         await self.desire_engine.generate_desires()
@@ -269,6 +254,7 @@ def _load_config(self) -> Dict:
         print("✅ BDI Cycle Complete")
 
     async def run_agent(self):
+        """Run the BDI agent continuously"""
         self.running = True
         print("🚀 FMAA BDI Master Agent Starting...")
         cycle_count = 0
@@ -286,24 +272,16 @@ def _load_config(self) -> Dict:
                 await asyncio.sleep(10)
 
     def _setup_dashboard_routes(self):
+        """Setup Flask dashboard routes"""
         @self.app.route('/')
         def dashboard():
-            return render_template_string(DASHBOARD_TEMPLATE,
-                                        beliefs=self.belief_system.beliefs,
-                                        desires=self.desire_engine.current_desires,
-                                        intentions=self.intention_system.active_intentions,
-                                        running=self.running)
-
+            return render_template_string(DASHBOARD_TEMPLATE, beliefs=self.belief_system.beliefs, desires=self.desire_engine.current_desires, intentions=self.intention_system.active_intentions, running=self.running)
         @self.app.route('/api/status')
         def api_status():
-            return jsonify({
-                'status': 'running' if self.running else 'stopped',
-                'beliefs': self.belief_system.beliefs,
-                'desires': len(self.desire_engine.current_desires),
-                'intentions': len(self.intention_system.active_intentions)
-            })
+            return jsonify({'status': 'running' if self.running else 'stopped', 'beliefs': self.belief_system.beliefs, 'desires': len(self.desire_engine.current_desires), 'intentions': len(self.intention_system.active_intentions)})
 
     def start_dashboard(self):
+        """Start the dashboard server"""
         print("🌐 Starting dashboard at http://localhost:8080")
         self.app.run(host='0.0.0.0', port=8080, debug=False)
 
