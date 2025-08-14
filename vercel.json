@@ -4,5 +4,11 @@
       "src": "termux_scripts/bdi_master.py",
       "use": "@vercel/python"
     }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "termux_scripts/bdi_master.py"
+    }
   ]
 }
