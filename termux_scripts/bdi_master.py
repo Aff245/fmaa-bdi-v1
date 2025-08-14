@@ -209,40 +209,50 @@ class FMAABDIMaster:
         self._setup_dashboard_routes()
 
     def _load_config(self) -> Dict:
-        """Load configuration from Environment Variables (for Vercel) or YAML (for local)."""
-        # Coba baca dari Environment Variables dulu (untuk Vercel)
-        # Vercel secara otomatis set variable 'VERCEL'
-        if os.getenv('VERCEL'):
-            print("✅ Running on Vercel, using environment variables.")
-            # Pastikan semua env var ada sebelum lanjut
-            required_vars = ['GITHUB_OWNER', 'GITHUB_REPO', 'SUPABASE_URL', 'GITHUB_TOKEN', 'SUPABASE_KEY', 'VERCEL_TOKEN', 'VERCEL_PROJECT_ID']
-            if not all(os.getenv(var) for var in required_vars):
-                print("❌ FATAL: Missing one or more required environment variables on Vercel.")
-                exit()
-            
-            return {
-                'cloud_services': {
-                    'github': {'owner': os.getenv('GITHUB_OWNER'), 'repo': os.getenv('GITHUB_REPO')},
-                    'supabase': {'url': os.getenv('SUPABASE_URL')}
-                },
-                'secrets': {
-                    'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN'),
-                    'SUPABASE_KEY': os.getenv('SUPABASE_KEY'),
-                    'VERCEL_TOKEN': os.getenv('VERCEL_TOKEN'),
-                    'VERCEL_PROJECT_ID': os.getenv('VERCEL_PROJECT_ID')
-                },
-                'revenue_targets': {'monthly_goal': 50000}
-            }
+    """Load configuration from Environment Variables (for Vercel) or YAML (for local)."""
+    # Coba baca dari Environment Variables dulu (untuk Vercel)
+    if os.getenv('VERCEL'):
+        print("🕵️  Detektif Mode: Memeriksa Environment Variables di Vercel...")
+        
+        required_vars = [
+            'GITHUB_OWNER', 'GITHUB_REPO', 'SUPABASE_URL', 
+            'GITHUB_TOKEN', 'SUPABASE_KEY', 'VERCEL_TOKEN', 'VERCEL_PROJECT_ID'
+        ]
+        
+        config = { 'secrets': {}, 'cloud_services': {'github':{}, 'supabase':{}}, 'revenue_targets': {'monthly_goal': 50000} }
+        missing_vars = []
+        
+        for var in required_vars:
+            value = os.getenv(var)
+            if value:
+                print(f"✔️ Ditemukan: {var}")
+            else:
+                print(f"❌ HILANG: {var}")
+                missing_vars.append(var)
 
-        # Jika tidak di Vercel, fallback ke file lokal (untuk Termux)
-        print("✅ Running locally, using config.yaml.")
-        config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
-        try:
-            with open(config_path, 'r') as f:
-                return yaml.safe_load(f)
-        except FileNotFoundError:
-            print(f"FATAL: config.yaml not found at {config_path}. Halting.")
-            exit()
+        if missing_vars:
+            print(f"FATAL: Variabel berikut tidak ditemukan di Vercel: {', '.join(missing_vars)}")
+            # Kita sengaja buat dia crash di sini agar pesannya muncul di log
+            raise Exception(f"Variabel Hilang: {', '.join(missing_vars)}")
+
+        print("✅ Semua variabel lingkungan ditemukan.")
+        config['cloud_services']['github']['owner'] = os.getenv('GITHUB_OWNER')
+        config['cloud_services']['github']['repo'] = os.getenv('GITHUB_REPO')
+        config['cloud_services']['supabase']['url'] = os.getenv('SUPABASE_URL')
+        config['secrets']['GITHUB_TOKEN'] = os.getenv('GITHUB_TOKEN')
+        config['secrets']['SUPABASE_KEY'] = os.getenv('SUPABASE_KEY')
+        config['secrets']['VERCEL_TOKEN'] = os.getenv('VERCEL_TOKEN')
+        config['secrets']['VERCEL_PROJECT_ID'] = os.getenv('VERCEL_PROJECT_ID')
+        return config
+
+    # Jika tidak di Vercel, fallback ke file lokal (untuk Termux)
+    print("✅ Running locally, using config.yaml.")
+    config_path = os.path.expanduser('~/fmaa-bdi-v1/android-center/config.yaml')
+    try:
+        with open(config_path, 'r') as f: return yaml.safe_load(f)
+    except FileNotFoundError:
+        print(f"FATAL: config.yaml not found at {config_path}. Halting.")
+        exit()
 
     async def bdi_cycle(self):
         """Main BDI reasoning cycle"""
