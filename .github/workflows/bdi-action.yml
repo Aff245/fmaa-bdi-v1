@@ -1,0 +1,21 @@
+name: BDI Agent Action Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_increase:
+        description: 'Target Revenue Increase'
+        required: true
+      strategy:
+        description: 'Scaling Strategy'
+        required: true
+
+jobs:
+  bdi-task:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Received Data
+        run: |
+          echo "✅ BDI Action Triggered Successfully!"
+          echo "📈 Target Increase: ${{ github.event.inputs.target_increase }}"
+          echo "🚀 Strategy: ${{ github.event.inputs.strategy }}"
